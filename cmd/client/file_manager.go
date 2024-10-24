@@ -10,6 +10,7 @@ type FileManger struct {
 	Flags      []string
 }
 
+// Commands send the tasks to the server
 func (fm *FileManger) Pwd() {
 	fmt.Printf("%v", fm.CurrentDir)
 }
@@ -30,10 +31,12 @@ func (fm *FileManger) Rm(paths ...string) {
 	fmt.Println("Rm")
 }
 
+// Upload send all the files to the server
 func (fm *FileManger) Upload(paths ...string) {
 	fmt.Println("Upload")
 }
 
+// Download works for every selected file
 func (fm *FileManger) Download(paths ...string) {
 	fmt.Println("Download")
 }
