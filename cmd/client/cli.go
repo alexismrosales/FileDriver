@@ -1,6 +1,7 @@
 package main
 
 import (
+	"cmd/client/internal"
 	"fmt"
 	"strings"
 	"time"
@@ -13,12 +14,18 @@ const (
 )
 
 // errorArgumentsException manage all args into an error
-func errorArgumentsException(ctx *cli.Context, args ...string) cli.ExitCoder {
-	argsString := strings.Join(args, ", ")
-	if ctx.Args().Len() != len(args) || ctx.Args().Len() == 0 {
-		return cli.Exit("ERROR:\tArguments "+argsString+" missing.", 0)
+func errorArgumentsException(ctx *cli.Context, nArguments bool, args ...string) cli.ExitCoder {
+	if nArguments && ctx.Args().Len() != 0 {
+		return nil
 	}
-	return nil
+	if !nArguments && ctx.Args().Len() == len(args) {
+		return nil
+	}
+	argsString := strings.Join(args, ", ")
+	if len(args) == 0 {
+		return cli.Exit("ERROR:\tNo arguments required", 0)
+	}
+	return cli.Exit("ERROR:\tArguments "+argsString+" missing.", 0)
 }
 
 // errorException show all errors not produced by the CLI
@@ -29,11 +36,11 @@ func errorException(errs ...error) cli.ExitCoder {
 	return cli.Exit("", 0)
 }
 
-func RunApp() *cli.App {
-	fm := &FileManger{
-		CurrentDir: "/",
-		Flags:      []string{},
-	}
+// RunApp show the cli output on terminal, after a command is written,
+// all the exceptions for arguments on the CLI are managed and call
+// the command_parser functions
+func RunApp(logger *internal.Logger) *cli.App {
+	cp := NewCommandParser(logger, "/", "")
 	app := &cli.App{
 		Name:      "filedriver",
 		Compiled:  time.Now(),
@@ -51,18 +58,18 @@ func RunApp() *cli.App {
 		},
 		Commands: []*cli.Command{
 			{
-				Name:      "Set direcction",
-				Aliases:   []string{"setdir"},
+				Name:      "setAddress",
+				Aliases:   []string{"setaddr"},
 				Category:  "CONNECTION",
 				Usage:     "Connects to the server with an IP address",
-				UsageText: "filedriver setdir [address] [port]",
+				UsageText: "filedriver setaddr [address] [port]",
 				Action: func(ctx *cli.Context) error {
-					if err := errorArgumentsException(ctx, "[address]", "[port]"); err != nil {
+					if err := errorArgumentsException(ctx, false, "[address]", "[port]"); err != nil {
 						return err
 					}
 					address := ctx.Args().Get(0)
 					port := ctx.Args().Get(1)
-					Connect(address, port)
+					cp.Connect(address, port)
 					return nil
 				},
 			},
@@ -73,10 +80,10 @@ func RunApp() *cli.App {
 				Usage:     "Disconnect server connection",
 				UsageText: "filedriver disconnect",
 				Action: func(ctx *cli.Context) error {
-					if ctx.Args().Len() != 0 {
-						return cli.Exit("ERROR: too many arguments", 0)
+					if err := errorArgumentsException(ctx, false); err != nil {
+						return err
 					}
-					Disconnect()
+					cp.Disconnect()
 					return nil
 				},
 			},
@@ -86,10 +93,10 @@ func RunApp() *cli.App {
 				Usage:     "Get directory to the current working directory",
 				UsageText: "filedriver pwd",
 				Action: func(ctx *cli.Context) error {
-					if ctx.Args().Len() != 0 {
-						return cli.Exit("ERROR: too many arguments", 0)
+					if err := errorArgumentsException(ctx, false); err != nil {
+						return err
 					}
-					fm.Pwd()
+					cp.Pwd()
 					return nil
 				},
 			},
@@ -101,10 +108,10 @@ func RunApp() *cli.App {
 				UsageText: "filedriver mkdir [Directory1] [Directory2] ...",
 				Action: func(ctx *cli.Context) error {
 					paths := ctx.Args().Slice()
-					if err := errorArgumentsException(ctx, "[Directory]..."); err != nil {
+					if err := errorArgumentsException(ctx, true, "[Directory]..."); err != nil {
 						return err
 					}
-					fm.Mkdir(paths...)
+					cp.Mkdir(paths...)
 					return nil
 				},
 			},
@@ -116,10 +123,10 @@ func RunApp() *cli.App {
 				Action: func(ctx *cli.Context) error {
 					paths := ctx.Args().Slice()
 					if ctx.Bool("all") {
-						fm.Flags = []string{"a"}
+						cp.flags = []string{"a"}
 						return nil
 					}
-					fm.Ls(paths...)
+					cp.Ls(paths...)
 					return nil
 				},
 				Flags: []cli.Flag{
@@ -137,7 +144,10 @@ func RunApp() *cli.App {
 				Usage:     "Navigate between directories",
 				UsageText: "filedriver cd [Path]",
 				Action: func(ctx *cli.Context) error {
-					fm.Cd(ctx.Args().Get(0))
+					if err := errorArgumentsException(ctx, false, "[Path]"); err != nil {
+						return err
+					}
+					cp.Cd(ctx.Args().Get(0))
 					return nil
 				},
 			},
@@ -148,19 +158,19 @@ func RunApp() *cli.App {
 				UsageText: "filedriver rm [File|Directory]",
 				Action: func(ctx *cli.Context) error {
 					paths := ctx.Args().Slice()
-					if err := errorArgumentsException(ctx, "[File|Directory]"); err != nil {
+					if err := errorArgumentsException(ctx, true, "[File|Directory]"); err != nil {
 						return err
 					}
 					if ctx.Bool("recursive") {
-						fm.Flags = []string{"r"}
+						cp.flags = []string{"r"}
 					}
 					if ctx.Bool("force") {
-						fm.Flags = []string{"f"}
+						cp.flags = []string{"f"}
 					}
 					if ctx.Bool("recursiveforced") || (ctx.Bool("force") && ctx.Bool("recursive")) {
-						fm.Flags = []string{"r", "f"}
+						cp.flags = []string{"r", "f"}
 					}
-					fm.Rm(paths...)
+					cp.Rm(paths...)
 					return nil
 				},
 				Flags: []cli.Flag{
@@ -190,10 +200,10 @@ func RunApp() *cli.App {
 				UsageText: "filedriver upload [file1] [file2] ...",
 				Action: func(ctx *cli.Context) error {
 					files := ctx.Args().Slice()
-					if err := errorArgumentsException(ctx, "[File1]..."); err != nil {
+					if err := errorArgumentsException(ctx, true, "[File1]..."); err != nil {
 						return err
 					}
-					fm.Upload(files...)
+					cp.Upload(files...)
 					return nil
 				},
 			},
@@ -204,15 +214,14 @@ func RunApp() *cli.App {
 				UsageText: "filedriver download [file2] [file2] ...",
 				Action: func(ctx *cli.Context) error {
 					files := ctx.Args().Slice()
-					if err := errorArgumentsException(ctx, "[File1]..."); err != nil {
+					if err := errorArgumentsException(ctx, true, "[File1]..."); err != nil {
 						return err
 					}
-					fm.Download(files...)
+					cp.Download(files...)
 					return nil
 				},
 			},
 		},
 	}
-
 	return app
 }
