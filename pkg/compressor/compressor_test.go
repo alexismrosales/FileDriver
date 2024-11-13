@@ -1,7 +1,7 @@
 package compressor
 
 import (
-	"cmd/client/internal/storage"
+	"github.com/alexismrosales/FileDriver/pkg/storage"
 	"testing"
 )
 
