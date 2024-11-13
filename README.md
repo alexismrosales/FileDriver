@@ -50,7 +50,7 @@ where you can use as any paths you want from your computer.
 ### Server
 To start listening petitions run:
 
-    $ fdserver
+    $ fdserver ip port
 It is important to keep the application running to receive petitions from server.
 
 ### Example
@@ -67,4 +67,4 @@ you can also use shorted paths like this:
 
     $ filedriver upload ~/dir1/file1
 
-There will be probably some problems, so use it as your own risk.
+**NOTE: There will be probably some problems, so use it as your own risk.**
