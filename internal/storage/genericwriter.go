@@ -29,6 +29,6 @@ func (gWriter *genericWriter) write(data any) error {
 	case rune:
 		_, err = gWriter.writer.WriteRune(d)
 	}
-	gWriter.writer.Flush()
+	err = gWriter.writer.Flush()
 	return err
 }

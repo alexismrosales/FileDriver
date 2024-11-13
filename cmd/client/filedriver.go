@@ -1,20 +1,30 @@
 package main
 
 import (
-	"cmd/client/internal"
+	"cmd/client/internal/logger"
 	"log"
 	"os"
 )
 
+const (
+	COMMANDPARSERCTX = "COMMAND PARSER"
+	CLICTX           = "CLI"
+	CLIENTCTX        = "CLIENT"
+)
+
 func main() {
-	// Here you can set your own path to save the logs of the APP, just
-	// add a your preferred path
-	logger, err := internal.NewLogger("~/.filedriver.log")
-	if err != nil {
-		log.Fatal("Error creating/reading loggerfile: ", err)
-	}
-	app := RunApp(logger)
+	app := RunApp()
 	if err := app.Run(os.Args); err != nil {
 		log.Fatal(err)
 	}
+}
+
+func CreateLogger(context string) *internal.Logger {
+	// Here you can set your own path to save the logs of the APP, just
+	// add a your preferred path
+	logger, err := internal.NewLogger(loggerFilePath, context)
+	if err != nil {
+		log.Fatal("Error creating/reading loggerfile: ", err)
+	}
+	return logger
 }

@@ -11,11 +11,13 @@ const (
 	INFO = iota
 	WARN
 	ERROR
+	FATALERROR
 	DEBUG
 )
 
 type Logger struct {
 	logFilePath string
+	context     string
 	file        *os.File
 	fStorage    *storage.FileStorage
 }
@@ -23,7 +25,7 @@ type Logger struct {
 // New logger created, setting a file to write logs on a specific path
 // setting the new file type and call the function NewWriter giving it the file
 // as a parameter to be manipulated easier on the next functions
-func NewLogger(logFilePath string) (*Logger, error) {
+func NewLogger(logFilePath string, context string) (*Logger, error) {
 	// In case the file has ~/ symbol, the path is fixed
 	logFilePath, err := storage.GetShortPath(logFilePath)
 	if err != nil {
@@ -34,15 +36,33 @@ func NewLogger(logFilePath string) (*Logger, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Logger{logFilePath: logFilePath, file: file, fStorage: storage.NewFileStorage()}, nil
+	return &Logger{
+		logFilePath: logFilePath,
+		context:     context,
+		file:        file,
+		fStorage:    storage.NewFileStorage(),
+	}, nil
+}
+
+func (logger *Logger) LogMessage(msg string) {
+	logger.Print(msg, INFO)
+}
+
+func (logger *Logger) LogError(err error) {
+	logger.Print("Error", ERROR, err)
 }
 
 // Print show the message formatted and then proceeds to write the log on the file
-func (logger *Logger) Print(message string, level int) {
-	var levelStr string
+func (logger *Logger) Print(message string, level int, errs ...error) {
+	var formatedMessage string
 	timestamp := time.Now().Format("2006-01-02 15:04:05")
-	levelStr = levelToString(level)
-	formatedMessage := fmt.Sprintf("[%s][%s]: %s", timestamp, levelStr, message)
+	levelStr := levelToString(level)
+	if len(errs) > 0 {
+		for _, err := range errs {
+			formatedMessage = fmt.Sprintf("[%s][%s][%s]: %s", timestamp, logger.context, levelStr, err.Error())
+		}
+	}
+	formatedMessage = fmt.Sprintf("[%s][%s][%s]: %s", timestamp, logger.context, levelStr, message)
 	// DEBUG messages won´t be printed
 	if level != DEBUG {
 		fmt.Println(formatedMessage)
@@ -60,6 +80,8 @@ func levelToString(level int) string {
 		return "WARN"
 	case ERROR:
 		return "ERROR"
+	case FATALERROR:
+		return "FATAL ERROR"
 	case DEBUG:
 		return "DEBUG"
 	default:

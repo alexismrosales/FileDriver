@@ -1,11 +1,19 @@
 package storage
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 )
 
 type FileStorage struct{}
+
+type File struct {
+	Name      string
+	Extension string
+	Data      []byte
+	Path      string
+}
 
 func NewFileStorage() *FileStorage {
 	return &FileStorage{}
@@ -36,13 +44,17 @@ func (fs *FileStorage) WriteToFile(filePath string, data any, appendData bool) e
 	defer file.Close()
 	// Writing data
 	err = writer.write(data)
+
 	return err
 }
 
 // ReadFromFile converts all the file into bytes
-func (fs *FileStorage) ReadFromFile(filePath string) ([]byte, error) {
-	filePath, err := GetShortPath(filePath)
+func (fs *FileStorage) ReadFromFile(p string) ([]byte, error) {
+	filePath, err := GetShortPath(p)
 	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return nil, errors.New("Error. Configuration file does not exists.")
+		}
 		return nil, err
 	}
 	return os.ReadFile(filePath)

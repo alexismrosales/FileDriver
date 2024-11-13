@@ -1,7 +1,6 @@
 package main
 
 import (
-	"cmd/client/internal"
 	"fmt"
 	"strings"
 	"time"
@@ -18,6 +17,7 @@ func errorArgumentsException(ctx *cli.Context, nArguments bool, args ...string) 
 	if nArguments && ctx.Args().Len() != 0 {
 		return nil
 	}
+
 	if !nArguments && ctx.Args().Len() == len(args) {
 		return nil
 	}
@@ -39,8 +39,8 @@ func errorException(errs ...error) cli.ExitCoder {
 // RunApp show the cli output on terminal, after a command is written,
 // all the exceptions for arguments on the CLI are managed and call
 // the command_parser functions
-func RunApp(logger *internal.Logger) *cli.App {
-	cp := NewCommandParser(logger, "/", "")
+func RunApp() *cli.App {
+	cp := NewCommandParser("/", "")
 	app := &cli.App{
 		Name:      "filedriver",
 		Compiled:  time.Now(),
@@ -69,8 +69,7 @@ func RunApp(logger *internal.Logger) *cli.App {
 					}
 					address := ctx.Args().Get(0)
 					port := ctx.Args().Get(1)
-					cp.Connect(address, port)
-					return nil
+					return cp.FirstConnection(address, port)
 				},
 			},
 			{
@@ -83,8 +82,7 @@ func RunApp(logger *internal.Logger) *cli.App {
 					if err := errorArgumentsException(ctx, false); err != nil {
 						return err
 					}
-					cp.Disconnect()
-					return nil
+					return cp.Disconnect()
 				},
 			},
 			{
@@ -96,8 +94,7 @@ func RunApp(logger *internal.Logger) *cli.App {
 					if err := errorArgumentsException(ctx, false); err != nil {
 						return err
 					}
-					cp.Pwd()
-					return nil
+					return cp.Pwd()
 				},
 			},
 			{
@@ -111,8 +108,7 @@ func RunApp(logger *internal.Logger) *cli.App {
 					if err := errorArgumentsException(ctx, true, "[Directory]..."); err != nil {
 						return err
 					}
-					cp.Mkdir(paths...)
-					return nil
+					return cp.Mkdir(paths...)
 				},
 			},
 			{
@@ -126,8 +122,7 @@ func RunApp(logger *internal.Logger) *cli.App {
 						cp.flags = []string{"a"}
 						return nil
 					}
-					cp.Ls(paths...)
-					return nil
+					return cp.Ls(paths...)
 				},
 				Flags: []cli.Flag{
 					&cli.BoolFlag{
@@ -147,8 +142,18 @@ func RunApp(logger *internal.Logger) *cli.App {
 					if err := errorArgumentsException(ctx, false, "[Path]"); err != nil {
 						return err
 					}
-					cp.Cd(ctx.Args().Get(0))
-					return nil
+					return cp.Cd(ctx.Args().Get(0))
+				},
+			},
+			{
+				Name:      "mv",
+				Category:  "FILE EDITION",
+				Usage:     "Move/Rename files",
+				UsageText: "filedriver mv [Directory1] [Directory2] ... [DestinationDirectory]",
+				Action: func(ctx *cli.Context) error {
+					paths := ctx.Args().Slice()
+
+					return cp.Mv(paths...)
 				},
 			},
 			{
@@ -170,8 +175,7 @@ func RunApp(logger *internal.Logger) *cli.App {
 					if ctx.Bool("recursiveforced") || (ctx.Bool("force") && ctx.Bool("recursive")) {
 						cp.flags = []string{"r", "f"}
 					}
-					cp.Rm(paths...)
-					return nil
+					return cp.Rm(paths...)
 				},
 				Flags: []cli.Flag{
 					&cli.BoolFlag{
@@ -203,8 +207,7 @@ func RunApp(logger *internal.Logger) *cli.App {
 					if err := errorArgumentsException(ctx, true, "[File1]..."); err != nil {
 						return err
 					}
-					cp.Upload(files...)
-					return nil
+					return cp.Upload(files...)
 				},
 			},
 			{
@@ -217,8 +220,7 @@ func RunApp(logger *internal.Logger) *cli.App {
 					if err := errorArgumentsException(ctx, true, "[File1]..."); err != nil {
 						return err
 					}
-					cp.Download(files...)
-					return nil
+					return cp.Download(files...)
 				},
 			},
 		},
