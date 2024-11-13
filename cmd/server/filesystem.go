@@ -1,7 +1,7 @@
 package main
 
 import (
-	"cmd/client/internal/storage"
+	"github.com/alexismrosales/FileDriver/pkg/storage"
 	"os"
 	"path/filepath"
 )
