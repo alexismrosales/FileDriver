@@ -1,7 +1,7 @@
 package main
 
 import (
-	"cmd/client/internal/logger"
+	"github.com/alexismrosales/FileDriver/pkg/logger"
 	"log"
 	"os"
 )

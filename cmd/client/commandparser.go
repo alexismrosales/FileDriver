@@ -1,8 +1,8 @@
 package main
 
 import (
-	"cmd/client/internal/logger"
 	"errors"
+	"github.com/alexismrosales/FileDriver/pkg/logger"
 	"strconv"
 	"strings"
 )
