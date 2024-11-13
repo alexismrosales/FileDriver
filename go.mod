@@ -1,4 +1,4 @@
-module cmd/client
+module github.com/alexismrosales/FileDriver
 
 go 1.23.2
 

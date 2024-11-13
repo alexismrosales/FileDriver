@@ -1,8 +1,8 @@
 package internal
 
 import (
-	"cmd/client/internal/storage"
 	"fmt"
+	"github.com/alexismrosales/FileDriver/pkg/storage"
 	"os"
 	"time"
 )

@@ -1,7 +1,7 @@
 package protocol
 
 import (
-	"cmd/client/internal/storage"
+	"github.com/alexismrosales/FileDriver/pkg/storage"
 	"net"
 )
 

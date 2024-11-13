@@ -1,9 +1,9 @@
 package main
 
 import (
-	"cmd/client/internal/logger"
-	"cmd/client/internal/protocol"
-	"cmd/client/internal/storage"
+	"github.com/alexismrosales/FileDriver/pkg/logger"
+	"github.com/alexismrosales/FileDriver/pkg/protocol"
+	"github.com/alexismrosales/FileDriver/pkg/storage"
 	"net"
 	"strings"
 	"time"

@@ -1,8 +1,8 @@
 package protocol
 
 import (
-	"cmd/client/internal/storage"
 	"encoding/json"
+	"github.com/alexismrosales/FileDriver/pkg/storage"
 )
 
 func EncodeMessage(data Message) ([]byte, error) {

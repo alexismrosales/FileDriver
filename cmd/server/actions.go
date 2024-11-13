@@ -1,11 +1,11 @@
 package main
 
 import (
-	"cmd/client/internal/compressor"
-	"cmd/client/internal/protocol"
-	"cmd/client/internal/storage"
 	"errors"
 	"fmt"
+	"github.com/alexismrosales/FileDriver/pkg/compressor"
+	"github.com/alexismrosales/FileDriver/pkg/protocol"
+	"github.com/alexismrosales/FileDriver/pkg/storage"
 	"net"
 	"os"
 	"path/filepath"

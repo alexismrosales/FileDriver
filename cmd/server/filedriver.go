@@ -1,6 +1,6 @@
 package main
 
-import internal "cmd/client/internal/logger"
+import "github.com/alexismrosales/FileDriver/pkg/logger"
 
 const (
 	COMMANDPARSERCTX = "COMMAND PARSER"
