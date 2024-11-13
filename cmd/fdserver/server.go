@@ -46,6 +46,7 @@ func (server *Server) ListenPetitions() error {
 	server.handshake()
 	// Create a directory called server/ in home dir
 	err := createBaseDir()
+
 	if err != nil {
 		return err
 	}

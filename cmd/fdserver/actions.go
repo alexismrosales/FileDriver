@@ -22,6 +22,10 @@ func download(currentPath string, paths []string, windowSize int, conn *net.UDPC
 		}
 		paths[i] = sPath
 	}
+	err := createDir("~/.filedriverCache")
+	if err != nil {
+		return err
+	}
 	cachePath, err := storage.GetShortPath("~/.filedriverCache")
 	if err != nil {
 		return err
@@ -31,6 +35,8 @@ func download(currentPath string, paths []string, windowSize int, conn *net.UDPC
 	if err != nil {
 		return err
 	}
+	// Remove all elements created during the execution
+	defer os.RemoveAll(filepath.Join(cachePath, zipName))
 
 	chunks, err := storage.NewChunkManager().FragmentData(filepath.Join(cachePath, zipName))
 	if err != nil {
