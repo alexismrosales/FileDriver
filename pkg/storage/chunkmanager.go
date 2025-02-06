@@ -69,7 +69,7 @@ func (cm *ChunkManager) FragmentData(paths ...string) ([]Chunk, error) {
 			chunk.ChunkIndex = chunkIndex
 			chunkIndex++
 
-			// Saving every chunk into chunks of data
+			// Saving every fragment into chunks of data
 			chunks = append(chunks, *chunk)
 		}
 	}

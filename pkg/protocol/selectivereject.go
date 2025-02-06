@@ -2,64 +2,86 @@ package protocol
 
 import (
 	"errors"
-	"fmt"
-	"github.com/alexismrosales/FileDriver/pkg/storage"
 	"net"
 	"sync"
 	"time"
+
+	"github.com/alexismrosales/FileDriver/pkg/storage"
 )
 
 type Answer struct {
 	Message     *Message
-	Err         error
 	IsLastChunk bool
+	ChunkIndex  int
 }
+
+// TODO: implements go routine to sent chunks of data with go routines
 
 // SelectiveRejectSend implements the protocol of selective reject when the client sends
 // data
 func SelectiveRejectSend(chunks []storage.Chunk, windowSize int, conn *net.UDPConn, addr *net.UDPAddr) error {
-	var mu sync.Mutex
-	packagesSent := make(map[int]struct{})
+	// variable to wait until the go routines are all finished
+	var wg sync.WaitGroup
+
 	leftPointer := 0
 	rightPointer := windowSize - 1
 
-	// Continuar mientras queden paquetes por enviar
+	// continue while there are chunks to send
 	for leftPointer < len(chunks) {
-		// Ajustar el puntero derecho si supera el límite de chunks
+		// channel to collect number of packets
+		packetsStatusQueue := make(chan struct {
+			int
+			bool
+		})
+
+		// adjust right pointer
 		if rightPointer >= len(chunks) {
 			rightPointer = len(chunks) - 1
 		}
 
-		// Procesa cada chunk de la ventana actual secuencialmente
-		for i := leftPointer; i <= rightPointer; i++ {
-			chunk := chunks[i]
-
-			// Verifica si el paquete ya fue enviado exitosamente
-			mu.Lock()
-			if _, chunkSent := packagesSent[chunk.ChunkIndex]; chunkSent {
-				mu.Unlock()
-				continue
-			}
-			mu.Unlock()
-
-			// Envía el chunk y espera la respuesta
-			answer := SentAndWaitAck(conn, addr, chunk)
-
-			if answer.IsLastChunk && answer.Message.Type == MsgAck {
-				break
-			}
-			if answer.Message != nil && answer.Message.Type == MsgAck {
-				mu.Lock()
-				packagesSent[chunk.ChunkIndex] = struct{}{}
-				mu.Unlock()
-			}
-
+		// TODO: think about how to manage all packets, can i check if the packets in the window were sent? if not sent the rest
+		// send all packets that windowSize allow
+		for w := leftPointer; w <= rightPointer; w++ {
+			wg.Add(1)
+			go sendPacket(chunks[w], conn, addr, packetsStatusQueue)
 		}
-		// Desplazar la ventana
+		// close channel
+		close(packetsStatusQueue)
+		// wait until all go routines end
+		wg.Wait()
+
+		// slide right window
 		leftPointer += windowSize
 		rightPointer += windowSize
 	}
 	return nil
+}
+
+// TODO: have in mind that there exists the possibility a state where connection is lost, add a timeout would be useful
+
+// sendPacket to the other side and fill channel value expecting chunk index value
+func sendPacket(chunk storage.Chunk, conn *net.UDPConn, addr *net.UDPAddr, status chan struct {
+	int
+	bool
+}) {
+	// Process every packet of the current window sequencially
+
+	// Sent the chunk and wait answer
+	err := SendAndWaitAck(conn, addr, chunk)
+
+	// If package was sent succesully eval notSent chan
+	if err != nil {
+		//fmt.Errorf(err.Error())
+		status <- struct {
+			int
+			bool
+		}{chunk.ChunkIndex, true}
+	} else {
+		status <- struct {
+			int
+			bool
+		}{chunk.ChunkIndex, false}
+	}
 }
 
 func SelectiveRejectReceive(windowSize int, segmentSize int, conn *net.UDPConn) ([]storage.Chunk, error) {
@@ -100,36 +122,27 @@ func SelectiveRejectReceive(windowSize int, segmentSize int, conn *net.UDPConn) 
 			continue
 		}
 		// Saving chunk without an specific order
+		// TODO: create method to order chunks in an specific order
 		chunks = append(chunks, *chunk)
 	}
 	return chunks, nil
 }
 
-// SentAndWaitAck sent a chunk of data and wait for an answer, if the answer is NAK
+// SendAndWaitAck sent a chunk of data and wait for an answer, if the answer is NAK
 // packet was not send correctly, is necessary to resend it
-func SentAndWaitAck(conn *net.UDPConn, addr *net.UDPAddr, chunk storage.Chunk) *Answer {
+func SendAndWaitAck(conn *net.UDPConn, addr *net.UDPAddr, chunk storage.Chunk) error {
 	err := SendChunk(conn, chunk, addr)
 	if err != nil {
-		return &Answer{Message: nil, Err: err}
+		return errors.New("error while sending chunk")
 	}
 	conn.SetReadDeadline(time.Now().Add(500 * time.Millisecond))
 	message, _, err := ReceiveMessage(conn)
 	if err != nil {
-		fmt.Println("Error receiveing ")
-		return &Answer{Message: nil, Err: err}
+		return errors.New("error  receiving packet")
 	}
 
 	if message.Type == MsgNak {
-		return &Answer{Message: message}
+		return errors.New("nak received")
 	}
-
-	if message.Type == MsgAck {
-		if chunk.TotalChunks == 0 {
-			return &Answer{Message: message, IsLastChunk: true}
-		}
-		return &Answer{Message: message}
-	}
-
-	// If not message ack or nak
-	return &Answer{Message: nil, Err: errors.New("unexpected message type")}
+	return nil
 }

@@ -38,6 +38,8 @@ func NewServerUDP(ip string, port int) (*Server, error) {
 	}, nil
 }
 
+// TODO: implement go routines to handle more than one clients
+
 // ListenPetitions start listening petitions from the client
 func (server *Server) ListenPetitions() error {
 	var timeoutCount int
